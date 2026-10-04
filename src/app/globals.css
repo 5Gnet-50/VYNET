@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  background: #0b1220;
+  color: #f8fafc;
+  font-family: Arial, Tahoma, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; background: #0b1220; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(ellipse at 50% -30%, rgb(30 64 175 / 18%), transparent 58%), #0b1220;
+}
+
+::selection { background: rgb(96 165 250 / 35%); }
