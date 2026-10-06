@@ -6,7 +6,7 @@
 
 ### تهيئة أول Owner
 
-1. أنشئ مستخدم Auth بآلية إدارية معتمدة في بيئة الاختبار، دون تضمين بيانات اعتماد في source.
+1. أنشئ مستخدم Auth بآلية إدارية معتمدة في بيئة الاختبار. استخدم البريد الداخلي المشتق `phone@vynet.app` وبيانات metadata `phone` و`display_name` المطابقة، دون تضمين بيانات اعتماد في source. تسجيل VYNET العام معطل.
 2. بعد trigger إنشاء `profiles`, استخرج UUID من لوحة Supabase المصرح بها.
 3. مرر `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BOOTSTRAP_OWNER_USER_ID`, و`BOOTSTRAP_ORGANIZATION_NAME` إلى بيئة shell موثوقة ثم نفّذ `pnpm bootstrap:owner` مرة واحدة. السكربت لا ينشئ Auth user؛ يستدعي RPC التي تتحقق من وجود profile وتمنع تكرار bootstrap بقفل transaction.
 4. لا تنفذ bootstrap من التسجيل العام أو من متصفح التطبيق. لا تضع service-role key في `NEXT_PUBLIC_*` ولا تُسجل بيانات دخول في تقارير عامة.

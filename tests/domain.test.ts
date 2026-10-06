@@ -4,8 +4,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { canReverseWrongDelivery, canTransitionOperation, canTransitionPossession, selectAgentStockForSale, selectOwnerStockForTransfer } from "../src/lib/domain/cards";
 import { isValidPassword, isValidPhone, phoneToInternalAuthEmail } from "../src/lib/domain/identity";
-import { canGrantMembershipRole } from "../src/lib/domain/authorization";
-import { canAcceptTransfer, expireTransferState } from "../src/lib/domain/transfers";
+import { canGrantMembershipRole, resolveVynetExperience } from "../src/lib/domain/authorization";
+import { canAcceptTransfer, expireTransferState, validateApprovedTransferLines, validateTransferRequestLines } from "../src/lib/domain/transfers";
 import { parseCardCsv } from "../src/lib/imports/csv";
 import { decryptCardCredential, encryptCardCredential, fingerprintCardCredential } from "../src/lib/security/card-credentials";
 
@@ -13,14 +13,81 @@ const fingerprintKey = Buffer.alloc(32, 3).toString("base64");
 const encryptionKey = Buffer.alloc(32, 7).toString("base64");
 const coreSql = readFileSync(join(process.cwd(), "supabase/migrations/202610040001_core_schema.sql"), "utf8");
 const operationsSql = readFileSync(join(process.cwd(), "supabase/migrations/202610040002_operations.sql"), "utf8");
+const stageOneSql = readFileSync(join(process.cwd(), "supabase/migrations/202610050001_stage_one_foundation.sql"), "utf8");
+const finalizationSql = readFileSync(join(process.cwd(), "supabase/migrations/202610060001_stage_one_finalization.sql"), "utf8");
 
 test("phone validation and the single internal email mapping are exact", () => {
   assert.equal(isValidPhone("712345678"), true);
   assert.equal(isValidPhone("812345678"), false);
   assert.equal(isValidPhone("71234567"), false);
   assert.equal(isValidPhone("7123456780"), false);
-  assert.equal(phoneToInternalAuthEmail("712345678"), "712345678@mutahidun.app");
+  assert.equal(phoneToInternalAuthEmail("712345678"), "712345678@vynet.app");
   assert.throws(() => phoneToInternalAuthEmail("+967712345678"), /INVALID_PHONE/);
+});
+
+test("multi-category transfer request quantities are validated without reserving inventory", () => {
+  const requested = [{ productId: "p500", quantity: 100 }, { productId: "p1000", quantity: 50 }];
+  assert.equal(validateTransferRequestLines(requested), true);
+  assert.equal(validateTransferRequestLines([{ productId: "p500", quantity: 0 }]), false);
+  assert.equal(validateTransferRequestLines([{ productId: "p500", quantity: 1 }, { productId: "p500", quantity: 2 }]), false);
+  assert.equal(validateApprovedTransferLines(requested, [
+    { productId: "p500", approvedQuantity: 80 }, { productId: "p1000", approvedQuantity: 50 },
+  ]), true);
+  assert.equal(validateApprovedTransferLines(requested, [
+    { productId: "p500", approvedQuantity: 0 }, { productId: "p1000", approvedQuantity: 50 },
+  ]), true);
+  assert.equal(validateApprovedTransferLines(requested, [
+    { productId: "p500", approvedQuantity: 0 }, { productId: "p1000", approvedQuantity: 0 },
+  ]), false);
+  assert.equal(validateApprovedTransferLines(requested, [{ productId: "p500", approvedQuantity: 100 }]), false);
+  assert.equal(validateApprovedTransferLines(requested, [
+    { productId: "p500", approvedQuantity: 101 }, { productId: "p1000", approvedQuantity: 50 },
+  ]), false);
+});
+
+test("VYNET resolves owner and agent experiences without exposing a role selector", () => {
+  assert.equal(resolveVynetExperience(["OWNER"]), "OWNER_ADMIN");
+  assert.equal(resolveVynetExperience(["ADMIN"]), "OWNER_ADMIN");
+  assert.equal(resolveVynetExperience(["AGENT"]), "AGENT");
+  assert.equal(resolveVynetExperience([]), "UNAUTHORIZED");
+  assert.equal(resolveVynetExperience(["OWNER", "AGENT"]), "AMBIGUOUS");
+});
+
+test("stage one schema separates transfer requests, executed lines, finance, and inbox notifications", () => {
+  assert.match(stageOneSql, /create table public\.transfer_requests/i);
+  assert.match(stageOneSql, /create table public\.transfer_request_lines/i);
+  assert.match(stageOneSql, /create table public\.transfer_lines/i);
+  assert.match(stageOneSql, /create table public\.financial_entries/i);
+  assert.match(stageOneSql, /create table public\.notifications/i);
+  assert.match(stageOneSql, /add column transfer_line_id uuid/i);
+  assert.match(stageOneSql, /financial_entries_append_only/i);
+  assert.match(stageOneSql, /inventory_movements_append_only/i);
+  assert.match(stageOneSql, /notifications_recipient_read/i);
+  assert.match(stageOneSql, /create or replace function public\.submit_agent_transfer_request/i);
+  assert.match(stageOneSql, /create or replace function public\.decide_transfer_request/i);
+  assert.match(stageOneSql, /revoke all on function public\.create_owner_agent_transfer[\s\S]*?from public, anon, authenticated/i);
+  const requestSubmit = stageOneSql.split("create or replace function private.submit_agent_transfer_request_impl(")[1]
+    ?.split("create or replace function public.submit_agent_transfer_request(")[0] ?? "";
+  assert.ok(requestSubmit.length > 0);
+  assert.doesNotMatch(requestSubmit, /insert into public\.transfers|update public\.cards|TRANSFER_RESERVATION/i);
+});
+
+test("stage one finalization pins VYNET auth, per-agent pricing, and atomic approved transfer execution", () => {
+  assert.match(finalizationSql, /new\.email is distinct from \(user_phone \|\| '@vynet\.app'\)/i);
+  assert.match(finalizationSql, /Membership and agent records are provisioned by governed admin\/bootstrap flows/i);
+  assert.match(finalizationSql, /create table public\.agent_product_prices/i);
+  assert.match(finalizationSql, /unique \(organization_id, agent_id, network_id, product_id\)/i);
+  assert.match(finalizationSql, /create or replace function public\.set_agent_product_price/i);
+  assert.match(finalizationSql, /create or replace function public\.execute_approved_transfer/i);
+  assert.match(finalizationSql, /for update skip locked/i);
+  assert.match(finalizationSql, /financial_entries_transfer_line_value_uidx/i);
+  assert.match(finalizationSql, /price\.unit_price,\s*line\.approved_quantity, price\.currency/i);
+  assert.match(finalizationSql, /create or replace function private\.accept_owner_agent_transfer_impl/i);
+  assert.match(finalizationSql, /TRANSFER_READY_FOR_ACCEPTANCE/i);
+  assert.match(finalizationSql, /TRANSFER_ACCEPTED/i);
+  assert.match(finalizationSql, /revoke all on function public\.issue_customer_claim_token\(\) from public, anon, authenticated/i);
+  assert.match(finalizationSql, /revoke all on function public\.activate_customer_with_claim_token\(text, uuid, uuid\) from public, anon, authenticated/i);
+  assert.match(finalizationSql, /rollback|raise exception 'insufficient_owner_inventory'/i);
 });
 
 test("password validation accepts six characters and rejects shorter values", () => {
@@ -154,7 +221,6 @@ test("client security-event RPC cannot fabricate password-change or session-revo
 });
 
 test("Customer, Agent, and Admin cannot assign Owner; only bootstrap can provision it", () => {
-  assert.equal(canGrantMembershipRole("CUSTOMER", "OWNER"), false);
   assert.equal(canGrantMembershipRole("AGENT", "OWNER"), false);
   assert.equal(canGrantMembershipRole("ADMIN", "OWNER"), false);
   assert.equal(canGrantMembershipRole("OWNER", "OWNER"), false);

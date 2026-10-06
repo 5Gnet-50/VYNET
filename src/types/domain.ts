@@ -5,7 +5,7 @@ export type IsoDateTime = string;
 
 export type Organization = { id: EntityId; name: string; createdAt: IsoDateTime; updatedAt: IsoDateTime };
 export type User = { id: EntityId; displayName: string; phone: string; createdAt: IsoDateTime };
-export type MembershipRole = "OWNER" | "ADMIN" | "AGENT" | "CUSTOMER";
+export type MembershipRole = "OWNER" | "ADMIN" | "AGENT";
 export type Membership = { id: EntityId; organizationId: EntityId; userId: EntityId; role: MembershipRole; createdAt: IsoDateTime };
 export type Agent = { id: EntityId; organizationId: EntityId; userId: EntityId; active: boolean; createdAt: IsoDateTime };
 export type CustomerStatus = "INACTIVE" | "ACTIVE" | "SUSPENDED";
@@ -46,17 +46,43 @@ export type CardBatch = {
   sourceFilename: string; uploadedByUserId: EntityId; uploadedAt: IsoDateTime; status: CardBatchStatus;
   totalRows: number; acceptedRows: number; rejectedRows: number; reviewRows: number;
   approvedByUserId: EntityId | null; approvedAt: IsoDateTime | null;
+  sourceFileRef?: string | null; sourceContentType?: string | null; sourceFileSizeBytes?: number | null;
+  sourceSha256?: string | null; classificationConfidence?: number | null;
+  processingStatus?: "UPLOADED" | "PROCESSING" | "REVIEW" | "READY" | "APPROVED" | "REJECTED" | "FAILED";
 };
 export type ImportRowStatus = "ACCEPTED" | "NEEDS_REVIEW" | "REJECTED" | "DUPLICATE_IN_FILE" | "ALREADY_EXISTS" | "INCOMPLETE";
 export type ImportRow = { id: EntityId; batchId: EntityId; rowNumber: number; status: ImportRowStatus; errorCode: string | null };
 
 export type TransferStatus = "CREATED" | "PENDING_ACCEPTANCE" | "ACCEPTED" | "CANCELLED" | "FAILED" | "EXPIRED";
-export type Transfer = {
-  id: EntityId; organizationId: EntityId; agentId: EntityId; networkId: EntityId; productId: EntityId;
-  status: TransferStatus; createdByUserId: EntityId; acceptedByUserId: EntityId | null;
-  createdAt: IsoDateTime; acceptedAt: IsoDateTime | null; expiresAt: IsoDateTime;
+export type TransferRequestStatus = "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "TRANSFERRED" | "CANCELLED";
+export type TransferRequestLine = {
+  id: EntityId; requestId: EntityId; networkId: EntityId; productId: EntityId;
+  requestedQuantity: number; approvedQuantity: number | null; createdAt: IsoDateTime;
 };
-export type TransferItem = { id: EntityId; transferId: EntityId; cardId: EntityId; createdAt: IsoDateTime };
+export type AgentProductPrice = {
+  id: EntityId; organizationId: EntityId; agentId: EntityId; networkId: EntityId; productId: EntityId;
+  unitPrice: number; currency: string; active: boolean; updatedAt: IsoDateTime;
+};
+export type TransferRequest = {
+  id: EntityId; operationId: EntityId; organizationId: EntityId; agentId: EntityId;
+  requestedByUserId: EntityId; status: TransferRequestStatus; submittedAt: IsoDateTime;
+  reviewedByUserId: EntityId | null; reviewedAt: IsoDateTime | null; decisionReason: string | null;
+  traceId: EntityId; lines: readonly TransferRequestLine[];
+};
+export type Transfer = {
+  id: EntityId; operationId: EntityId; organizationId: EntityId; agentId: EntityId;
+  /** Legacy single-line fields; new transfers use lines. */
+  networkId: EntityId | null; productId: EntityId | null; requestId: EntityId | null;
+  status: TransferStatus; createdByUserId: EntityId; acceptedByUserId: EntityId | null;
+  executedByUserId: EntityId | null; createdAt: IsoDateTime; sentAt: IsoDateTime | null;
+  acceptedAt: IsoDateTime | null; expiresAt: IsoDateTime;
+};
+export type TransferLine = {
+  id: EntityId; transferId: EntityId; requestLineId: EntityId | null; networkId: EntityId; productId: EntityId;
+  requestedQuantity: number | null; approvedQuantity: number | null; actualQuantity: number;
+  agentUnitPrice: number | null; currency: string | null; priceSourceId?: EntityId | null; executedAt: IsoDateTime | null;
+};
+export type TransferItem = { id: EntityId; transferId: EntityId; transferLineId: EntityId | null; cardId: EntityId; createdAt: IsoDateTime };
 export type Sale = {
   id: EntityId; organizationId: EntityId; agentId: EntityId; customerId: EntityId; status: OperationState;
   createdByUserId: EntityId; price: number | null; currency: string | null;
@@ -85,6 +111,18 @@ export type SecurityEvent = {
 export type IdempotencyKey = {
   id: EntityId; organizationId: EntityId; actorUserId: EntityId; operationType: string;
   key: string; operationId: EntityId | null; createdAt: IsoDateTime;
+};
+export type FinancialEntryType = "TRANSFER_VALUE" | "PAYMENT_RECEIVED" | "ADJUSTMENT" | "REVERSAL";
+/** Amounts are unsigned facts; accounting debit/credit convention remains deliberately unspecified. */
+export type FinancialEntry = {
+  id: EntityId; organizationId: EntityId; agentId: EntityId; operationId: EntityId; transferId: EntityId | null;
+  transferLineId?: EntityId | null; relatedEntryId: EntityId | null; entryType: FinancialEntryType;
+  amount: number; unitPrice?: number | null; quantity?: number | null; currency: string;
+  occurredAt: IsoDateTime; actorUserId: EntityId | null; traceId: EntityId; reasonCode: string | null;
+};
+export type Notification = {
+  id: EntityId; organizationId: EntityId | null; recipientUserId: EntityId; operationId: EntityId | null;
+  notificationType: string; title: string; body: string; readAt: IsoDateTime | null; createdAt: IsoDateTime;
 };
 export type ClaimToken = { id: EntityId; customerId: EntityId; expiresAt: IsoDateTime; usedAt: IsoDateTime | null };
 export type Device = { id: EntityId; userId: EntityId; label: string | null; revokedAt: IsoDateTime | null };

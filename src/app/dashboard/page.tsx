@@ -1,11 +1,9 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { redirect } from "next/navigation";
+import { getCurrentVynetExperience } from "@/lib/auth/experience";
 
-export default function DashboardPage() {
-  return (
-    <PlaceholderPage
-      title="لوحة التحكم"
-      description="هذه الصفحة قيد التجهيز. ستُحدد محتوياتها بعد اعتماد دور المستخدم وسياسة الوصول المناسبة."
-      note="لا توجد جلسة مستخدم أو بيانات مرتبطة بهذه الصفحة."
-    />
-  );
+export default async function DashboardPage() {
+  const experience = await getCurrentVynetExperience();
+  if (experience === "OWNER_ADMIN") redirect("/admin");
+  if (experience === "AGENT") redirect("/agent");
+  redirect("/login");
 }

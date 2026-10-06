@@ -2,15 +2,15 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "كارتي 5G",
-  description: "منصة تأسيسية لإدارة بطاقات الإنترنت بين المالك والوكيل والعميل.",
-  applicationName: "كارتي 5G",
+  title: "VYNET | فاينت",
+  description: "منصة إدارة البطاقات والشبكات والتحويلات للمالك والوكيل.",
+  applicationName: "VYNET",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "كارتي 5G", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "VYNET", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b1220",
+  themeColor: "#0B0620",
   width: "device-width",
   initialScale: 1,
 };

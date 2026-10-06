@@ -19,8 +19,6 @@ export const routeGroups = [
       { href: "/dashboard", title: "لوحة التحكم", description: "نقطة دخول أولية حسب الدور", audience: "عام" },
       { href: "/admin", title: "الإدارة", description: "مساحة إدارة أولية", audience: "المالك والإدارة" },
       { href: "/agent", title: "الوكيل", description: "مساحة الوكيل الأولية", audience: "الوكيل" },
-      { href: "/customer", title: "العميل", description: "واجهة العميل الأولية", audience: "العميل" },
-      { href: "/customer/cards", title: "كروتي", description: "مكان عرض بطاقات العميل مستقبلًا", audience: "العميل" },
     ],
   },
   {

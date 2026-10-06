@@ -7,8 +7,8 @@ export default function CustomerPage() {
   return (
     <PageFrame>
       <div>
-        <p className="text-sm font-medium text-blue-300">واجهة العميل</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">مرحبًا بك في كارتي 5G</h1>
+        <p className="text-sm font-medium text-blue-300">VY CARD · تطبيق مستقل</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">مرحبًا بك في VY CARD</h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-slate-300">
           هذه الصفحة قيد التجهيز. أسماء الشبكات أدناه للعرض فقط وليست حالة توفر مباشرة.
         </p>

@@ -9,7 +9,7 @@ export function phoneToInternalAuthEmail(phone: string): string {
     throw new Error("INVALID_PHONE");
   }
 
-  return `${phone}@mutahidun.app`;
+  return `${phone}@vynet.app`;
 }
 
 export function isValidPassword(password: string): boolean {

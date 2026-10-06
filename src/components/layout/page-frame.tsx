@@ -9,7 +9,7 @@ export function PageFrame({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="mx-auto w-full max-w-5xl px-5 pb-6 text-xs text-slate-500 sm:px-8">
-        كارتي 5G · نموذج تأسيسي غير متصل بخدمات تشغيلية
+        VYNET · منصة إدارة المالك والوكيل
       </footer>
     </div>
   );

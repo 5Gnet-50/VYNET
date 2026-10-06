@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: dark;
-  background: #0b1220;
+  background: #0B0620;
   color: #f8fafc;
   font-family: Arial, Tahoma, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -11,12 +11,12 @@
 }
 
 * { box-sizing: border-box; }
-html { min-height: 100%; background: #0b1220; }
+html { min-height: 100%; background: #0B0620; }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background: radial-gradient(ellipse at 50% -30%, rgb(30 64 175 / 18%), transparent 58%), #0b1220;
+  background: radial-gradient(ellipse at 50% -30%, rgb(0 123 255 / 10%), transparent 58%), #0B0620;
 }
 
 ::selection { background: rgb(96 165 250 / 35%); }
