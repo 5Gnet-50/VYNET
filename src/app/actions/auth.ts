@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { resolveVynetExperience } from "@/lib/domain/authorization";
 import { isValidPassword, isValidPhone, phoneToInternalAuthEmail } from "@/lib/domain/identity";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -41,8 +42,14 @@ export async function loginAction(_state: AuthActionState, formData: FormData): 
     return { error: "لا توجد صلاحية VYNET واضحة لهذا الحساب. تواصل مع مسؤول النظام." };
   }
 
-  const { error: auditError } = await supabase.rpc("record_security_event", {
-    p_event_type: "LOGIN_SUCCESS",
+  const admin = createSupabaseAdminClient();
+  if (!admin) {
+    await supabase.auth.signOut();
+    return { error: "تعذر إتمام تسجيل الدخول بأمان. حاول مجددًا." };
+  }
+
+  const { error: auditError } = await admin.rpc("record_login_success_event", {
+    p_actor_user_id: signIn.user.id,
     p_trace_id: crypto.randomUUID(),
   });
   if (auditError) {
