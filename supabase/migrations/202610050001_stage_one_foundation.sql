@@ -53,6 +53,7 @@ create table public.transfer_request_lines (
   foreign key (organization_id, request_id) references public.transfer_requests(organization_id, id) on delete restrict,
   foreign key (organization_id, network_id, product_id) references public.products(organization_id, network_id, id) on delete restrict,
   unique (request_id, product_id),
+  unique (organization_id, id),
   unique (organization_id, request_id, id)
 );
 
@@ -356,9 +357,9 @@ alter table public.financial_entries enable row level security;
 alter table public.notifications enable row level security;
 
 create policy transfer_requests_scoped_read on public.transfer_requests for select to authenticated using (
-  private.has_org_role(organization_id, array['OWNER','ADMIN']::text[])
-  or exists (select 1 from public.agents a where a.id = agent_id and a.user_id = (select auth.uid()) and a.active
-    and private.has_org_role(organization_id, array['AGENT']::text[]))
+  private.has_org_role(transfer_requests.organization_id, array['OWNER','ADMIN']::text[])
+  or exists (select 1 from public.agents a where a.id = transfer_requests.agent_id and a.user_id = (select auth.uid()) and a.active
+    and private.has_org_role(transfer_requests.organization_id, array['AGENT']::text[]))
 );
 create policy transfer_request_lines_scoped_read on public.transfer_request_lines for select to authenticated using (
   exists (select 1 from public.transfer_requests r where r.id = transfer_request_lines.request_id
@@ -368,15 +369,15 @@ create policy transfer_request_lines_scoped_read on public.transfer_request_line
         and private.has_org_role(transfer_request_lines.organization_id, array['AGENT']::text[]))))
 );
 create policy transfer_lines_scoped_read on public.transfer_lines for select to authenticated using (
-  private.has_org_role(organization_id, array['OWNER','ADMIN']::text[])
+  private.has_org_role(public.transfer_lines.organization_id, array['OWNER','ADMIN']::text[])
   or exists (select 1 from public.transfers t join public.agents a on a.id = t.agent_id
-    where t.id = transfer_id and a.user_id = (select auth.uid()) and a.active
-      and private.has_org_role(organization_id, array['AGENT']::text[]))
+    where t.id = public.transfer_lines.transfer_id and a.user_id = (select auth.uid()) and a.active
+      and private.has_org_role(public.transfer_lines.organization_id, array['AGENT']::text[]))
 );
 create policy financial_entries_scoped_read on public.financial_entries for select to authenticated using (
-  private.has_org_role(organization_id, array['OWNER','ADMIN']::text[])
-  or exists (select 1 from public.agents a where a.id = agent_id and a.user_id = (select auth.uid()) and a.active
-    and private.has_org_role(organization_id, array['AGENT']::text[]))
+  private.has_org_role(financial_entries.organization_id, array['OWNER','ADMIN']::text[])
+  or exists (select 1 from public.agents a where a.id = financial_entries.agent_id and a.user_id = (select auth.uid()) and a.active
+    and private.has_org_role(financial_entries.organization_id, array['AGENT']::text[]))
 );
 create policy notifications_recipient_read on public.notifications for select to authenticated
   using (recipient_user_id = (select auth.uid()));
